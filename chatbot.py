@@ -1,16 +1,40 @@
-from chatterbot import ChatBot
-from chatterbot.trainers import ChatterBotCorpusTrainer
+import bs4
+import json
+from langchain import hub
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.document_loaders import WebBaseLoader
+from langchain_community.vectorstores import Chroma
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnablePassthrough
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
-source_cb = "https://realpython.com/build-a-chatbot-python-chatterbot/"
-chatbot = ChatBot("Dr. Pepper", 
-                  storage_adapter='chatterbot.storage.SQLStorageAdapter',
-                  database_uri='sqlite:///database.sqlite3')
+# Load, chunk and index the contents of the blog.
+def load_sicknesses(filename):
+    with open(filename, 'r') as file:
+        data = json.load(file)
+    return data
 
-exit_conditions = (":q", "quit", "exit")
-while True:
-    query = input("> ")
-    if query in exit_conditions:
-        break
-    else:
-        print(f"👩‍⚕️ Dr. PP: {chatbot.get_response(query)}")
+sicknesses = load_sicknesses('SymptomsOutput.json')
+docs = sicknesses
+
+text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+splits = text_splitter.split_documents(docs)
+vectorstore = Chroma.from_documents(documents=splits, embedding=OpenAIEmbeddings())
+
+# Retrieve and generate using the relevant snippets of the blog.
+retriever = vectorstore.as_retriever()
+prompt = hub.pull("rlm/rag-prompt")
+llm = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=0)
+
+
+def format_docs(docs):
+    return "\n\n".join(doc.page_content for doc in docs)
+
+
+rag_chain = (
+    {"context": retriever | format_docs, "question": RunnablePassthrough()}
+    | prompt
+    | llm
+    | StrOutputParser()
+)
 
