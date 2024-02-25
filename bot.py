@@ -3,23 +3,36 @@ from chatterbot.trainers import ListTrainer
 
 CHATS = "script.txt"
 
-chatbot = ChatBot("Chatpot")
+chatbot = ChatBot("Wellness Bot")
 
 chatbot.storage.drop()
 
 trainer = ListTrainer(chatbot)
 trainer.train([
     "Hi",
-    "What are your symptoms?",
+    "Hi I'm Wellness Bot! What are your symptoms?",
 ])
 trainer.train([
     "Coughing",
     "Do you have a fever?",
 ])
 trainer.train([
-    "Naur.",
+    "Yes",
     "Any other symptoms?",
 ])
+trainer.train([
+    "Yes, stuffy runny nose and sneezing",
+    "Any other symptoms?",
+])
+trainer.train([
+    "Scratchy throat",
+    "Any other symptoms?",
+])
+trainer.train([
+    "No",
+    "Okay! You may have the common cold, hope you feel better soon",
+])
+
 
 trainer.train(CHATS)
 
